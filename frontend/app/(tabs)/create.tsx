@@ -17,8 +17,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { useInvoice } from '../../context/InvoiceContext';
 import FormSection from '../../components/FormSection';
 import FormInput from '../../components/FormInput';
+import DateInput from '../../components/DateInput';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+
+const addOneMonth = (ddmmyyyy: string): string => {
+  const parts = ddmmyyyy.split('/');
+  if (parts.length !== 3) return '';
+  const date = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+  date.setMonth(date.getMonth() + 1);
+  const d = date.getDate().toString().padStart(2, '0');
+  const m = (date.getMonth() + 1).toString().padStart(2, '0');
+  return `${d}/${m}/${date.getFullYear()}`;
+};
 
 export default function CreateScreen() {
   const router = useRouter();
@@ -33,6 +44,13 @@ export default function CreateScreen() {
     setInvoice,
   } = useInvoice();
   const [saving, setSaving] = useState(false);
+
+  const handleInvoiceDateChange = useCallback((dateStr: string) => {
+    updateField('invoice_date', dateStr);
+    if (dateStr) {
+      updateField('due_date', addOneMonth(dateStr));
+    }
+  }, [updateField]);
 
   const handleSave = useCallback(async () => {
     if (!invoice.invoice_number) {
@@ -102,6 +120,7 @@ export default function CreateScreen() {
           <FormSection title="Invoice To">
             <FormInput label="Company Name" value={invoice.client_details.company_name} onChangeText={v => updateClient('company_name', v)} testID="input-client-company" />
             <FormInput label="Contact Name" value={invoice.client_details.contact_name} onChangeText={v => updateClient('contact_name', v)} testID="input-client-contact" />
+            <FormInput label="Company Email" value={invoice.client_details.company_email} onChangeText={v => updateClient('company_email', v)} keyboardType="email-address" testID="input-client-email" />
             <FormInput label="Address Line 1" value={invoice.client_details.address_line1} onChangeText={v => updateClient('address_line1', v)} testID="input-client-address1" />
             <FormInput label="Address Line 2" value={invoice.client_details.address_line2} onChangeText={v => updateClient('address_line2', v)} testID="input-client-address2" />
             <FormInput label="Address Line 3" value={invoice.client_details.address_line3} onChangeText={v => updateClient('address_line3', v)} testID="input-client-address3" />
@@ -110,8 +129,8 @@ export default function CreateScreen() {
           {/* Invoice Details */}
           <FormSection title="Invoice Details">
             <FormInput label="Invoice Number" value={invoice.invoice_number} onChangeText={v => updateField('invoice_number', v)} placeholder="e.g. 001" testID="input-invoice-number" />
-            <FormInput label="Invoice Date" value={invoice.invoice_date} onChangeText={v => updateField('invoice_date', v)} placeholder="DD/MM/YYYY" testID="input-invoice-date" />
-            <FormInput label="Due Date" value={invoice.due_date} onChangeText={v => updateField('due_date', v)} placeholder="DD/MM/YYYY" testID="input-due-date" />
+            <DateInput label="Invoice Date" value={invoice.invoice_date} onChangeDate={handleInvoiceDateChange} testID="input-invoice-date" />
+            <DateInput label="Due Date (auto: +1 month)" value={invoice.due_date} onChangeDate={v => updateField('due_date', v)} testID="input-due-date" />
           </FormSection>
 
           {/* Line Items */}
@@ -130,7 +149,7 @@ export default function CreateScreen() {
                     </TouchableOpacity>
                   )}
                 </View>
-                <FormInput label="Service Date" value={item.service_date} onChangeText={v => updateLineItem(item.id, 'service_date', v)} placeholder="DD/MM/YYYY" testID={`input-service-date-${idx}`} />
+                <DateInput label="Service Date" value={item.service_date} onChangeDate={v => updateLineItem(item.id, 'service_date', v)} testID={`input-service-date-${idx}`} />
                 <FormInput label="Product / Service" value={item.product} onChangeText={v => updateLineItem(item.id, 'product', v)} testID={`input-product-${idx}`} />
                 <FormInput label="Description" value={item.description} onChangeText={v => updateLineItem(item.id, 'description', v)} testID={`input-description-${idx}`} />
                 <View style={styles.gstRow}>

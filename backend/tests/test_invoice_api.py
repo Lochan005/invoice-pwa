@@ -6,6 +6,12 @@ import pytest
 import requests
 import os
 import json
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load frontend .env to get EXPO_PUBLIC_BACKEND_URL
+frontend_env = Path(__file__).parent.parent.parent / 'frontend' / '.env'
+load_dotenv(frontend_env)
 
 BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', '').rstrip('/')
 

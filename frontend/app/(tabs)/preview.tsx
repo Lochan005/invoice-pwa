@@ -4,18 +4,14 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  TextInput,
   StyleSheet,
   Alert,
   ActivityIndicator,
-  Modal,
   Platform,
-  KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useInvoice } from '../../context/InvoiceContext';
-import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
@@ -35,14 +31,27 @@ const BANK = {
   account_no: '925720296',
 };
 
+// Helper for mobile PDF save using new expo-file-system API
+const savePdfMobile = async (base64Data: string, filename: string) => {
+  try {
+    // Use the new File API (expo-file-system v19+)
+    const { File, Paths } = require('expo-file-system/next');
+    const file = new File(Paths.cache, filename);
+    file.write(base64Data, { encoding: 'base64' });
+    await Sharing.shareAsync(file.uri, { mimeType: 'application/pdf' });
+  } catch {
+    // Fallback to legacy API
+    const FileSystem = require('expo-file-system/legacy');
+    const fileUri = FileSystem.documentDirectory + filename;
+    await FileSystem.writeAsStringAsync(fileUri, base64Data, { encoding: 'base64' });
+    await Sharing.shareAsync(fileUri, { mimeType: 'application/pdf' });
+  }
+};
+
 export default function PreviewScreen() {
   const { invoice, totals } = useInvoice();
   const [downloading, setDownloading] = useState(false);
   const [emailing, setEmailing] = useState(false);
-  const [emailModal, setEmailModal] = useState(false);
-  const [emailTo, setEmailTo] = useState('');
-  const [emailSubject, setEmailSubject] = useState('');
-  const [emailMessage, setEmailMessage] = useState('');
 
   const client = invoice.client_details;
 
@@ -69,11 +78,7 @@ export default function PreviewScreen() {
         a.click();
         URL.revokeObjectURL(url);
       } else {
-        const fileUri = FileSystem.documentDirectory + data.filename;
-        await FileSystem.writeAsStringAsync(fileUri, data.pdf_base64, {
-          encoding: 'base64',
-        });
-        await Sharing.shareAsync(fileUri, { mimeType: 'application/pdf' });
+        await savePdfMobile(data.pdf_base64, data.filename);
       }
       Alert.alert('Success', 'PDF downloaded!');
     } catch (e: any) {
@@ -83,13 +88,14 @@ export default function PreviewScreen() {
     }
   };
 
-  const handleSendEmail = async () => {
-    if (!emailTo) {
-      Alert.alert('Required', 'Please enter recipient email');
-      return;
-    }
+  const handleEmailInvoice = async () => {
     if (!invoice.id) {
       Alert.alert('Save First', 'Please save the invoice before emailing.');
+      return;
+    }
+    const clientEmail = invoice.client_details?.company_email;
+    if (!clientEmail) {
+      Alert.alert('No Email', 'Please add a company email in the "Invoice To" section first.');
       return;
     }
     setEmailing(true);
@@ -98,20 +104,16 @@ export default function PreviewScreen() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          recipient_email: emailTo,
-          subject: emailSubject || `Invoice #${invoice.invoice_number}`,
-          message: emailMessage,
+          recipient_email: clientEmail,
+          subject: `Invoice #${invoice.invoice_number}`,
+          message: `Please find attached Invoice #${invoice.invoice_number}.`,
         }),
       });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.detail || 'Failed to send email');
       }
-      Alert.alert('Success', `Invoice emailed to ${emailTo}`);
-      setEmailModal(false);
-      setEmailTo('');
-      setEmailSubject('');
-      setEmailMessage('');
+      Alert.alert('Email Sent', `Invoice #${invoice.invoice_number} has been emailed to ${clientEmail}`);
     } catch (e: any) {
       Alert.alert('Error', e.message);
     } finally {
@@ -162,6 +164,7 @@ export default function PreviewScreen() {
                 <Text key={i} style={styles.clientAddr}>{l}</Text>
               ))}
               {client.contact_name ? <Text style={styles.clientAddr}>{client.contact_name}</Text> : null}
+              {client.company_email ? <Text style={styles.clientEmail}>{client.company_email}</Text> : null}
             </View>
             <View style={styles.colRight}>
               <View style={styles.metaRow}>
@@ -260,69 +263,20 @@ export default function PreviewScreen() {
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.actionBtn, styles.emailBtn]}
-          onPress={() => setEmailModal(true)}
+          onPress={handleEmailInvoice}
+          disabled={emailing}
           testID="email-invoice-btn"
         >
-          <Ionicons name="mail-outline" size={20} color="#FFF" />
-          <Text style={styles.emailBtnText}>Email Invoice</Text>
+          {emailing ? (
+            <ActivityIndicator color="#FFF" size="small" />
+          ) : (
+            <>
+              <Ionicons name="mail-outline" size={20} color="#FFF" />
+              <Text style={styles.emailBtnText}>Email Invoice</Text>
+            </>
+          )}
         </TouchableOpacity>
       </View>
-
-      {/* Email Modal */}
-      <Modal visible={emailModal} transparent animationType="slide">
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View style={styles.modalContent} testID="email-modal">
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Email Invoice</Text>
-              <TouchableOpacity onPress={() => setEmailModal(false)} testID="close-email-modal">
-                <Ionicons name="close" size={24} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.modalLabel}>Recipient Email *</Text>
-            <TextInput
-              testID="email-recipient-input"
-              style={styles.modalInput}
-              value={emailTo}
-              onChangeText={setEmailTo}
-              placeholder="email@example.com"
-              placeholderTextColor="#9CA3AF"
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            <Text style={styles.modalLabel}>Subject</Text>
-            <TextInput
-              testID="email-subject-input"
-              style={styles.modalInput}
-              value={emailSubject}
-              onChangeText={setEmailSubject}
-              placeholder={`Invoice #${invoice.invoice_number}`}
-              placeholderTextColor="#9CA3AF"
-            />
-            <Text style={styles.modalLabel}>Message</Text>
-            <TextInput
-              testID="email-message-input"
-              style={[styles.modalInput, { height: 80, textAlignVertical: 'top' }]}
-              value={emailMessage}
-              onChangeText={setEmailMessage}
-              placeholder="Optional message..."
-              placeholderTextColor="#9CA3AF"
-              multiline
-            />
-            <TouchableOpacity
-              style={styles.sendBtn}
-              onPress={handleSendEmail}
-              disabled={emailing}
-              testID="send-email-btn"
-            >
-              {emailing ? (
-                <ActivityIndicator color="#FFF" />
-              ) : (
-                <Text style={styles.sendBtnText}>Send Email</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -368,6 +322,7 @@ const styles = StyleSheet.create({
   invoiceToLabel: { fontSize: 9, fontWeight: '400', color: '#999', marginBottom: 3 },
   clientName: { fontSize: 11, fontWeight: '700', color: '#000', marginBottom: 2 },
   clientAddr: { fontSize: 9, color: '#333', lineHeight: 14 },
+  clientEmail: { fontSize: 9, color: '#2563EB', lineHeight: 14 },
   metaRow: { flexDirection: 'row', gap: 12, marginBottom: 2 },
   metaLabel: { fontSize: 9, color: '#999', width: 55 },
   metaValue: { fontSize: 9, color: '#000', fontWeight: '500' },
@@ -436,38 +391,4 @@ const styles = StyleSheet.create({
   actionBtnText: { fontSize: 14, fontWeight: '600', color: '#2563EB' },
   emailBtn: { backgroundColor: '#2563EB', borderColor: '#2563EB' },
   emailBtnText: { fontSize: 14, fontWeight: '600', color: '#FFF' },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#FFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 24,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
-  },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  modalTitle: { fontSize: 20, fontWeight: '700', color: '#111827' },
-  modalLabel: { fontSize: 13, fontWeight: '500', color: '#374151', marginBottom: 4, marginTop: 12 },
-  modalInput: {
-    height: 44,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    fontSize: 15,
-    color: '#111827',
-    backgroundColor: '#F9FAFB',
-  },
-  sendBtn: {
-    backgroundColor: '#2563EB',
-    height: 48,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  sendBtnText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
 });
