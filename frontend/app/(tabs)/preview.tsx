@@ -71,7 +71,7 @@ export default function PreviewScreen() {
       } else {
         const fileUri = FileSystem.documentDirectory + data.filename;
         await FileSystem.writeAsStringAsync(fileUri, data.pdf_base64, {
-          encoding: FileSystem.EncodingType.Base64,
+          encoding: 'base64',
         });
         await Sharing.shareAsync(fileUri, { mimeType: 'application/pdf' });
       }

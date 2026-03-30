@@ -140,7 +140,7 @@ def generate_invoice_pdf(invoice: Invoice) -> bytes:
     s_totals_label = ParagraphStyle('TotLabel', fontName='Helvetica', fontSize=9, leading=13, textColor=colors.HexColor('#999999'), alignment=TA_RIGHT)
     s_totals_value = ParagraphStyle('TotValue', fontName='Helvetica', fontSize=9, leading=13, textColor=colors.black, alignment=TA_RIGHT)
     s_balance_label = ParagraphStyle('BalLabel', fontName='Helvetica', fontSize=10, leading=14, textColor=colors.HexColor('#999999'), alignment=TA_RIGHT)
-    s_balance_value = ParagraphStyle('BalValue', fontName='Helvetica-Bold', fontSize=16, leading=20, textColor=colors.black, alignment=TA_RIGHT)
+    s_balance_value = ParagraphStyle('BalValue', fontName='Helvetica-Bold', fontSize=12, leading=15, textColor=colors.black, alignment=TA_RIGHT)
     s_bank_title = ParagraphStyle('BankTitle', fontName='Helvetica-Bold', fontSize=9, leading=14, textColor=colors.black)
     s_bank_text = ParagraphStyle('BankText', fontName='Helvetica-Bold', fontSize=9, leading=14, textColor=colors.black)
     s_footer = ParagraphStyle('Footer', fontName='Helvetica', fontSize=8, leading=10, textColor=colors.HexColor('#CCCCCC'))
@@ -160,7 +160,7 @@ def generate_invoice_pdf(invoice: Invoice) -> bytes:
     # Logo
     logo_cell = ""
     if LOGO_PATH.exists():
-        logo_cell = Image(str(LOGO_PATH), width=56, height=56)
+        logo_cell = Image(str(LOGO_PATH), width=75, height=56)
 
     header_table = Table(
         [[company_block, logo_cell]],
