@@ -20,6 +20,21 @@ import * as Sharing from 'expo-sharing';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
+// Hardcoded company & bank details matching the PDF
+const COMPANY = {
+  name: 'The trustee for SAITECH TRADING TRUST',
+  address: ['33 LOWANNAWAY', 'ARMADALE WA  6112'],
+  phone: '+61 470530451',
+  email: 'shiva.prasad1947@gmail.com',
+  abn: 'ABN 39315636679',
+};
+const BANK = {
+  title: 'BANK DETAILS;',
+  account_name: 'SAITECH ENGINEERING PTY LTD',
+  bsb: '086006',
+  account_no: '925720296',
+};
+
 export default function PreviewScreen() {
   const { invoice, totals } = useInvoice();
   const [downloading, setDownloading] = useState(false);
@@ -29,9 +44,7 @@ export default function PreviewScreen() {
   const [emailSubject, setEmailSubject] = useState('');
   const [emailMessage, setEmailMessage] = useState('');
 
-  const company = invoice.company_details;
   const client = invoice.client_details;
-  const bank = invoice.bank_details;
 
   const handleDownloadPdf = async () => {
     if (!invoice.id) {
@@ -123,45 +136,45 @@ export default function PreviewScreen() {
         <View style={styles.paper} testID="invoice-preview">
           {/* Company Header */}
           <View style={styles.paperHeader}>
-            {company.company_name ? (
-              <Text style={styles.companyName}>{company.company_name}</Text>
-            ) : (
-              <Text style={styles.placeholder}>Your Company Name</Text>
-            )}
-            <Text style={styles.taxInvoiceTitle}>Tax Invoice</Text>
+            <View style={styles.companyCol}>
+              <Text style={styles.companyName}>{COMPANY.name}</Text>
+              {COMPANY.address.map((line, i) => (
+                <Text key={i} style={styles.companyAddr}>{line}</Text>
+              ))}
+              <Text style={styles.companyAddr}>{COMPANY.phone}</Text>
+              <Text style={styles.companyAddr}>{COMPANY.email}</Text>
+              <Text style={styles.companyAbn}>{COMPANY.abn}</Text>
+            </View>
           </View>
 
-          {/* Company Info */}
-          <View style={styles.companyInfo}>
-            {[company.address_line1, company.address_line2, company.address_line3].filter(Boolean).map((l, i) => (
-              <Text key={i} style={styles.infoText}>{l}</Text>
-            ))}
-            {company.phone ? <Text style={styles.infoText}>{company.phone}</Text> : null}
-            {company.company_email ? <Text style={styles.infoText}>{company.company_email}</Text> : null}
-            {company.abn ? <Text style={styles.infoText}>ABN {company.abn}</Text> : null}
-          </View>
+          {/* Divider */}
+          <View style={styles.divider} />
+
+          {/* Tax Invoice Title */}
+          <Text style={styles.taxInvoiceTitle}>Tax Invoice</Text>
 
           {/* Client + Invoice Details */}
           <View style={styles.twoCol}>
             <View style={styles.colLeft}>
-              <Text style={styles.sectionLabel}>Invoice To</Text>
+              <Text style={styles.invoiceToLabel}>INVOICE TO</Text>
               <Text style={styles.clientName}>{client.company_name || '—'}</Text>
-              {client.contact_name ? <Text style={styles.infoText}>{client.contact_name}</Text> : null}
-              {client.address_line1 ? <Text style={styles.infoText}>{client.address_line1}</Text> : null}
-              {client.company_email ? <Text style={styles.infoText}>{client.company_email}</Text> : null}
+              {[client.address_line1, client.address_line2, client.address_line3].filter(Boolean).map((l, i) => (
+                <Text key={i} style={styles.clientAddr}>{l}</Text>
+              ))}
+              {client.contact_name ? <Text style={styles.clientAddr}>{client.contact_name}</Text> : null}
             </View>
             <View style={styles.colRight}>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>INVOICE</Text>
-                <Text style={styles.detailValue}>{invoice.invoice_number || '—'}</Text>
+              <View style={styles.metaRow}>
+                <Text style={styles.metaLabel}>INVOICE</Text>
+                <Text style={styles.metaValue}>{invoice.invoice_number || '—'}</Text>
               </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>DATE</Text>
-                <Text style={styles.detailValue}>{invoice.invoice_date || '—'}</Text>
+              <View style={styles.metaRow}>
+                <Text style={styles.metaLabel}>DATE</Text>
+                <Text style={styles.metaValue}>{invoice.invoice_date || '—'}</Text>
               </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>DUE DATE</Text>
-                <Text style={styles.detailValue}>{invoice.due_date || '—'}</Text>
+              <View style={styles.metaRow}>
+                <Text style={styles.metaLabel}>DUE DATE</Text>
+                <Text style={styles.metaValue}>{invoice.due_date || '—'}</Text>
               </View>
             </View>
           </View>
@@ -169,21 +182,23 @@ export default function PreviewScreen() {
           {/* Line Items Table */}
           <View style={styles.table}>
             <View style={styles.tableHeader}>
-              <Text style={[styles.th, { flex: 2 }]}>Product</Text>
-              <Text style={[styles.th, { flex: 2 }]}>Description</Text>
-              <Text style={[styles.th, { flex: 1, textAlign: 'center' }]}>GST</Text>
-              <Text style={[styles.th, { flex: 0.8, textAlign: 'center' }]}>Qty</Text>
-              <Text style={[styles.th, { flex: 1, textAlign: 'right' }]}>Rate</Text>
-              <Text style={[styles.th, { flex: 1.2, textAlign: 'right' }]}>Amount</Text>
+              <Text style={[styles.th, { flex: 1.2 }]}>DATE</Text>
+              <Text style={[styles.th, { flex: 1.5 }]}>{''}</Text>
+              <Text style={[styles.th, { flex: 2.5 }]}>DESCRIPTION</Text>
+              <Text style={[styles.th, { flex: 0.8, textAlign: 'center' }]}>GST</Text>
+              <Text style={[styles.th, { flex: 0.6, textAlign: 'center' }]}>QTY</Text>
+              <Text style={[styles.th, { flex: 0.8, textAlign: 'right' }]}>RATE</Text>
+              <Text style={[styles.th, { flex: 1, textAlign: 'right' }]}>AMOUNT</Text>
             </View>
             {invoice.line_items.map((item, idx) => (
               <View key={item.id} style={styles.tableRow} testID={`preview-item-${idx}`}>
-                <Text style={[styles.td, { flex: 2 }]} numberOfLines={1}>{item.product || '—'}</Text>
-                <Text style={[styles.td, { flex: 2 }]} numberOfLines={1}>{item.description || '—'}</Text>
-                <Text style={[styles.td, { flex: 1, textAlign: 'center' }]}>{item.gst_applicable ? 'Yes' : 'No'}</Text>
-                <Text style={[styles.td, { flex: 0.8, textAlign: 'center' }]}>{item.quantity}</Text>
-                <Text style={[styles.td, { flex: 1, textAlign: 'right' }]}>${item.rate.toFixed(2)}</Text>
-                <Text style={[styles.td, { flex: 1.2, textAlign: 'right' }]}>${(item.quantity * item.rate).toFixed(2)}</Text>
+                <Text style={[styles.td, { flex: 1.2 }]}>{item.service_date || '—'}</Text>
+                <Text style={[styles.td, styles.tdBold, { flex: 1.5 }]} numberOfLines={1}>{item.product || ''}</Text>
+                <Text style={[styles.td, { flex: 2.5 }]}>{item.description || '—'}</Text>
+                <Text style={[styles.td, { flex: 0.8, textAlign: 'center' }]}>{item.gst_applicable ? 'GST' : ''}</Text>
+                <Text style={[styles.td, { flex: 0.6, textAlign: 'center' }]}>{item.quantity}</Text>
+                <Text style={[styles.td, { flex: 0.8, textAlign: 'right' }]}>{item.rate.toFixed(2)}</Text>
+                <Text style={[styles.td, { flex: 1, textAlign: 'right' }]}>{(item.quantity * item.rate).toFixed(2)}</Text>
               </View>
             ))}
           </View>
@@ -192,35 +207,35 @@ export default function PreviewScreen() {
           <View style={styles.totals}>
             <View style={styles.totalsRow}>
               <Text style={styles.totalsLabel}>SUBTOTAL</Text>
-              <Text style={styles.totalsValue} testID="preview-subtotal">${totals.subtotal.toFixed(2)}</Text>
+              <Text style={styles.totalsValue} testID="preview-subtotal">{totals.subtotal.toFixed(2)}</Text>
             </View>
             <View style={styles.totalsRow}>
               <Text style={styles.totalsLabel}>GST TOTAL</Text>
-              <Text style={styles.totalsValue} testID="preview-gst">${totals.gst_total.toFixed(2)}</Text>
+              <Text style={styles.totalsValue} testID="preview-gst">{totals.gst_total.toFixed(2)}</Text>
             </View>
-            <View style={styles.totalsRow}>
+            <View style={[styles.totalsRow, styles.totalLine]}>
               <Text style={styles.totalsLabel}>TOTAL</Text>
-              <Text style={styles.totalsValue} testID="preview-total">${totals.total.toFixed(2)}</Text>
+              <Text style={styles.totalsValue} testID="preview-total">{totals.total.toFixed(2)}</Text>
             </View>
-            <View style={[styles.totalsRow, styles.balanceDueRow]}>
+            <View style={styles.balanceDueRow}>
               <Text style={styles.balanceDueLabel}>BALANCE DUE</Text>
               <Text style={styles.balanceDueValue} testID="preview-balance">A${totals.total.toFixed(2)}</Text>
             </View>
           </View>
 
-          {/* Bank Details */}
-          {(bank.account_name || bank.bsb || bank.account_number) && (
-            <View style={styles.bankSection}>
-              <View style={styles.bankDivider} />
-              <Text style={styles.bankTitle}>BANK DETAILS</Text>
-              {bank.account_name ? <Text style={styles.bankText}>ACCOUNT NAME: {bank.account_name}</Text> : null}
-              {bank.bsb ? <Text style={styles.bankText}>BSB NO: {bank.bsb}</Text> : null}
-              {bank.account_number ? <Text style={styles.bankText}>ACCOUNT NO: {bank.account_number}</Text> : null}
-            </View>
-          )}
+          {/* Bank Details Box */}
+          <View style={styles.bankBox}>
+            <Text style={styles.bankTitle}>{BANK.title}</Text>
+            <Text style={styles.bankText}>ACCOUNT NAME: {BANK.account_name}</Text>
+            <Text style={styles.bankText}>{'\n'}BSB NO: {BANK.bsb}</Text>
+            <Text style={styles.bankText}>ACCOUNT NO: {BANK.account_no}</Text>
+          </View>
 
           {/* Footer */}
-          <Text style={styles.thankYou}>THANK YOU FOR YOUR BUSINESS</Text>
+          <View style={styles.footerRow}>
+            <Text style={styles.footerText}>THANKYOU FOR YOUR BUSINESS</Text>
+            <Text style={styles.footerText}>Page 1 of 1</Text>
+          </View>
         </View>
 
         <View style={{ height: 120 }} />
@@ -330,7 +345,7 @@ const styles = StyleSheet.create({
   scrollContent: { padding: 16 },
   paper: {
     backgroundColor: '#FFF',
-    borderRadius: 4,
+    borderRadius: 2,
     padding: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -340,50 +355,59 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
-  paperHeader: { marginBottom: 12 },
-  companyName: { fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 2 },
-  placeholder: { fontSize: 16, fontWeight: '700', color: '#D1D5DB', fontStyle: 'italic' },
-  taxInvoiceTitle: { fontSize: 22, fontWeight: '800', color: '#2563EB', marginTop: 4 },
-  companyInfo: { marginBottom: 16 },
-  infoText: { fontSize: 11, color: '#6B7280', lineHeight: 16 },
-  twoCol: { flexDirection: 'row', marginBottom: 16 },
+  paperHeader: { flexDirection: 'row', justifyContent: 'space-between' },
+  companyCol: { flex: 1 },
+  companyName: { fontSize: 13, fontWeight: '700', color: '#000', marginBottom: 3 },
+  companyAddr: { fontSize: 9, color: '#555', lineHeight: 14 },
+  companyAbn: { fontSize: 9, fontWeight: '700', color: '#000', marginTop: 1 },
+  divider: { height: 0.5, backgroundColor: '#CCC', marginVertical: 10 },
+  taxInvoiceTitle: { fontSize: 20, fontWeight: '400', color: '#7BA7C9', marginBottom: 8 },
+  twoCol: { flexDirection: 'row', marginBottom: 14 },
   colLeft: { flex: 1 },
   colRight: { flex: 1, alignItems: 'flex-end' },
-  sectionLabel: { fontSize: 10, fontWeight: '700', color: '#6B7280', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
-  clientName: { fontSize: 14, fontWeight: '700', color: '#111827', marginBottom: 2 },
-  detailRow: { flexDirection: 'row', gap: 8, marginBottom: 2 },
-  detailLabel: { fontSize: 10, fontWeight: '700', color: '#6B7280' },
-  detailValue: { fontSize: 10, color: '#111827', fontWeight: '500' },
-  table: { marginBottom: 12 },
+  invoiceToLabel: { fontSize: 9, fontWeight: '400', color: '#999', marginBottom: 3 },
+  clientName: { fontSize: 11, fontWeight: '700', color: '#000', marginBottom: 2 },
+  clientAddr: { fontSize: 9, color: '#333', lineHeight: 14 },
+  metaRow: { flexDirection: 'row', gap: 12, marginBottom: 2 },
+  metaLabel: { fontSize: 9, color: '#999', width: 55 },
+  metaValue: { fontSize: 9, color: '#000', fontWeight: '500' },
+  table: { marginBottom: 10 },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#F3F4F6',
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    borderWidth: 0.5,
-    borderColor: '#E5E7EB',
+    backgroundColor: '#DCE8F2',
+    paddingVertical: 5,
+    paddingHorizontal: 6,
   },
-  th: { fontSize: 9, fontWeight: '700', color: '#6B7280', textTransform: 'uppercase' },
+  th: { fontSize: 8, fontWeight: '700', color: '#7BA7C9' },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 6,
-    paddingHorizontal: 8,
+    paddingVertical: 5,
+    paddingHorizontal: 6,
     borderBottomWidth: 0.5,
-    borderColor: '#E5E7EB',
+    borderBottomColor: '#E5E7EB',
+    borderStyle: 'dashed',
   },
-  td: { fontSize: 10, color: '#374151' },
-  totals: { alignItems: 'flex-end', marginBottom: 16 },
-  totalsRow: { flexDirection: 'row', justifyContent: 'space-between', width: '60%', paddingVertical: 3 },
-  totalsLabel: { fontSize: 10, fontWeight: '700', color: '#6B7280' },
-  totalsValue: { fontSize: 10, color: '#111827', fontWeight: '500' },
-  balanceDueRow: { borderTopWidth: 1.5, borderTopColor: '#2563EB', marginTop: 4, paddingTop: 6 },
-  balanceDueLabel: { fontSize: 12, fontWeight: '800', color: '#111827' },
-  balanceDueValue: { fontSize: 12, fontWeight: '800', color: '#2563EB' },
-  bankSection: { marginBottom: 16 },
-  bankDivider: { height: 0.5, backgroundColor: '#E5E7EB', marginBottom: 8 },
-  bankTitle: { fontSize: 10, fontWeight: '700', color: '#111827', marginBottom: 4 },
-  bankText: { fontSize: 10, color: '#6B7280', lineHeight: 16 },
-  thankYou: { fontSize: 10, fontWeight: '700', color: '#6B7280', textAlign: 'center', marginTop: 8 },
+  td: { fontSize: 9, color: '#333' },
+  tdBold: { fontWeight: '700', color: '#000' },
+  totals: { alignItems: 'flex-end', marginBottom: 10 },
+  totalsRow: { flexDirection: 'row', justifyContent: 'space-between', width: '55%', paddingVertical: 3 },
+  totalsLabel: { fontSize: 9, fontWeight: '400', color: '#999' },
+  totalsValue: { fontSize: 9, color: '#000', fontWeight: '500' },
+  totalLine: { borderBottomWidth: 0.5, borderBottomColor: '#CCC' },
+  balanceDueRow: { flexDirection: 'row', justifyContent: 'space-between', width: '55%', paddingTop: 6, alignItems: 'center' },
+  balanceDueLabel: { fontSize: 10, fontWeight: '400', color: '#999' },
+  balanceDueValue: { fontSize: 16, fontWeight: '800', color: '#000' },
+  bankBox: {
+    backgroundColor: '#F0F0F0',
+    borderRadius: 2,
+    padding: 12,
+    marginTop: 10,
+    marginBottom: 20,
+  },
+  bankTitle: { fontSize: 9, fontWeight: '700', color: '#000', marginBottom: 6 },
+  bankText: { fontSize: 9, fontWeight: '700', color: '#000', lineHeight: 16 },
+  footerRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
+  footerText: { fontSize: 8, color: '#CCC' },
   actionBar: {
     position: 'absolute',
     bottom: 0,

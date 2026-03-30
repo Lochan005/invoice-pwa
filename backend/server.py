@@ -18,8 +18,19 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable, Image
 from reportlab.lib.enums import TA_LEFT, TA_RIGHT, TA_CENTER
+
+# --- Hardcoded Company & Bank Details ---
+COMPANY_NAME = "The trustee for SAITECH TRADING TRUST"
+COMPANY_ADDRESS = ["33 LOWANNAWAY", "ARMADALE WA  6112"]
+COMPANY_PHONE = "+61 470530451"
+COMPANY_EMAIL = "shiva.prasad1947@gmail.com"
+COMPANY_ABN = "ABN 39315636679"
+BANK_ACCOUNT_NAME = "SAITECH ENGINEERING PTY LTD"
+BANK_BSB = "086006"
+BANK_ACCOUNT_NO = "925720296"
+LOGO_PATH = Path(__file__).parent / "saitech_logo.png"
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -103,124 +114,207 @@ def calculate_totals(line_items: List[LineItem]):
 
 def generate_invoice_pdf(invoice: Invoice) -> bytes:
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=20*mm, bottomMargin=20*mm, leftMargin=15*mm, rightMargin=15*mm)
+    page_w, page_h = A4
+    left_margin = 15*mm
+    right_margin = 15*mm
+    top_margin = 15*mm
+    bottom_margin = 20*mm
+    content_width = page_w - left_margin - right_margin
+
     styles = getSampleStyleSheet()
+
+    # --- Styles matching reference exactly ---
+    s_company = ParagraphStyle('CompanyName', fontName='Helvetica-Bold', fontSize=12, leading=15, textColor=colors.black)
+    s_addr = ParagraphStyle('Addr', fontName='Helvetica', fontSize=9, leading=12, textColor=colors.HexColor('#333333'))
+    s_addr_bold = ParagraphStyle('AddrBold', fontName='Helvetica-Bold', fontSize=9, leading=12, textColor=colors.black)
+    s_tax_title = ParagraphStyle('TaxTitle', fontName='Helvetica', fontSize=18, leading=22, textColor=colors.HexColor('#7BA7C9'))
+    s_invoice_to_label = ParagraphStyle('InvToLabel', fontName='Helvetica', fontSize=9, leading=12, textColor=colors.HexColor('#999999'))
+    s_client_name = ParagraphStyle('ClientName', fontName='Helvetica-Bold', fontSize=10, leading=14, textColor=colors.black)
+    s_client_addr = ParagraphStyle('ClientAddr', fontName='Helvetica', fontSize=9, leading=12, textColor=colors.black)
+    s_meta_label = ParagraphStyle('MetaLabel', fontName='Helvetica', fontSize=9, leading=13, textColor=colors.HexColor('#999999'))
+    s_meta_value = ParagraphStyle('MetaValue', fontName='Helvetica', fontSize=9, leading=13, textColor=colors.black, alignment=TA_RIGHT)
+    s_th = ParagraphStyle('TH', fontName='Helvetica-Bold', fontSize=9, leading=12, textColor=colors.HexColor('#7BA7C9'))
+    s_td = ParagraphStyle('TD', fontName='Helvetica', fontSize=9, leading=12, textColor=colors.black)
+    s_td_bold = ParagraphStyle('TDBold', fontName='Helvetica-Bold', fontSize=9, leading=12, textColor=colors.black)
+    s_td_right = ParagraphStyle('TDRight', fontName='Helvetica', fontSize=9, leading=12, textColor=colors.black, alignment=TA_RIGHT)
+    s_totals_label = ParagraphStyle('TotLabel', fontName='Helvetica', fontSize=9, leading=13, textColor=colors.HexColor('#999999'), alignment=TA_RIGHT)
+    s_totals_value = ParagraphStyle('TotValue', fontName='Helvetica', fontSize=9, leading=13, textColor=colors.black, alignment=TA_RIGHT)
+    s_balance_label = ParagraphStyle('BalLabel', fontName='Helvetica', fontSize=10, leading=14, textColor=colors.HexColor('#999999'), alignment=TA_RIGHT)
+    s_balance_value = ParagraphStyle('BalValue', fontName='Helvetica-Bold', fontSize=16, leading=20, textColor=colors.black, alignment=TA_RIGHT)
+    s_bank_title = ParagraphStyle('BankTitle', fontName='Helvetica-Bold', fontSize=9, leading=14, textColor=colors.black)
+    s_bank_text = ParagraphStyle('BankText', fontName='Helvetica-Bold', fontSize=9, leading=14, textColor=colors.black)
+    s_footer = ParagraphStyle('Footer', fontName='Helvetica', fontSize=8, leading=10, textColor=colors.HexColor('#CCCCCC'))
+    s_footer_right = ParagraphStyle('FooterR', fontName='Helvetica', fontSize=8, leading=10, textColor=colors.HexColor('#CCCCCC'), alignment=TA_RIGHT)
+
     elements = []
-    page_width = A4[0] - 30*mm
 
-    title_style = ParagraphStyle('InvTitle', parent=styles['Title'], fontSize=24, textColor=colors.HexColor('#2563EB'), fontName='Helvetica-Bold', alignment=TA_LEFT, spaceAfter=2*mm)
-    heading_style = ParagraphStyle('Heading', parent=styles['Normal'], fontSize=11, fontName='Helvetica-Bold', textColor=colors.HexColor('#111827'), spaceAfter=2*mm)
-    normal_style = ParagraphStyle('Norm', parent=styles['Normal'], fontSize=9, fontName='Helvetica', textColor=colors.HexColor('#374151'), leading=13)
-    bold_style = ParagraphStyle('Bold', parent=styles['Normal'], fontSize=9, fontName='Helvetica-Bold', textColor=colors.HexColor('#111827'), leading=13)
-    right_style = ParagraphStyle('Right', parent=styles['Normal'], fontSize=9, fontName='Helvetica', textColor=colors.HexColor('#374151'), alignment=TA_RIGHT, leading=13)
-    small_style = ParagraphStyle('Small', parent=styles['Normal'], fontSize=8, fontName='Helvetica-Bold', textColor=colors.HexColor('#6B7280'))
-    center_style = ParagraphStyle('Center', parent=styles['Normal'], fontSize=10, fontName='Helvetica-Bold', textColor=colors.HexColor('#6B7280'), alignment=TA_CENTER)
+    # === 1. HEADER: Company details (left) + Logo (right) ===
+    company_block = []
+    company_block.append(Paragraph(f"<b>{COMPANY_NAME}</b>", s_company))
+    for line in COMPANY_ADDRESS:
+        company_block.append(Paragraph(line, s_addr))
+    company_block.append(Paragraph(COMPANY_PHONE, s_addr))
+    company_block.append(Paragraph(COMPANY_EMAIL, s_addr))
+    company_block.append(Paragraph(f"<b>{COMPANY_ABN}</b>", s_addr_bold))
 
-    # Company name header
-    company = invoice.company_details
-    if company.company_name:
-        elements.append(Paragraph(company.company_name, ParagraphStyle('CompName', parent=bold_style, fontSize=14)))
-    elements.append(Paragraph("Tax Invoice", title_style))
+    # Logo
+    logo_cell = ""
+    if LOGO_PATH.exists():
+        logo_cell = Image(str(LOGO_PATH), width=56, height=56)
 
-    # Company details
-    for line in [company.address_line1, company.address_line2, company.address_line3, company.phone, company.company_email]:
-        if line:
-            elements.append(Paragraph(line, normal_style))
-    if company.abn:
-        elements.append(Paragraph(f"ABN {company.abn}", normal_style))
-    elements.append(Spacer(1, 6*mm))
-
-    # Two column: Invoice To | Invoice details
-    client = invoice.client_details
-    client_lines = "<b>Invoice To:</b><br/>"
-    if client.company_name:
-        client_lines += f"<b>{client.company_name}</b><br/>"
-    for line in [client.contact_name, client.address_line1, client.address_line2, client.company_email]:
-        if line:
-            client_lines += f"{line}<br/>"
-
-    inv_lines = f"<b>INVOICE</b>  {invoice.invoice_number}<br/><b>DATE</b>  {invoice.invoice_date or '—'}<br/><b>DUE DATE</b>  {invoice.due_date or '—'}"
-
-    header_table = Table([
-        [Paragraph(client_lines, normal_style), Paragraph(inv_lines, right_style)]
-    ], colWidths=[page_width * 0.55, page_width * 0.45])
-    header_table.setStyle(TableStyle([('VALIGN', (0, 0), (-1, -1), 'TOP')]))
-    elements.append(header_table)
-    elements.append(Spacer(1, 6*mm))
-
-    # Line items table
-    table_header = [
-        Paragraph("<b>Date</b>", small_style),
-        Paragraph("<b>Product</b>", small_style),
-        Paragraph("<b>Description</b>", small_style),
-        Paragraph("<b>GST</b>", small_style),
-        Paragraph("<b>Qty</b>", small_style),
-        Paragraph("<b>Rate</b>", small_style),
-        Paragraph("<b>Amount</b>", small_style),
-    ]
-    table_data = [table_header]
-    for item in invoice.line_items:
-        amt = item.quantity * item.rate
-        table_data.append([
-            Paragraph(item.service_date, normal_style),
-            Paragraph(item.product, normal_style),
-            Paragraph(item.description, normal_style),
-            Paragraph("Yes" if item.gst_applicable else "No", normal_style),
-            Paragraph(str(int(item.quantity) if item.quantity == int(item.quantity) else item.quantity), normal_style),
-            Paragraph(f"${item.rate:.2f}", right_style),
-            Paragraph(f"${amt:.2f}", right_style),
-        ])
-    if not invoice.line_items:
-        table_data.append([Paragraph("—", normal_style)] * 7)
-
-    col_widths = [55, 70, 95, 30, 30, 50, 55]
-    line_table = Table(table_data, colWidths=col_widths)
-    line_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F3F4F6')),
-        ('ALIGN', (-2, 1), (-1, -1), 'RIGHT'),
-        ('FONTSIZE', (0, 0), (-1, -1), 9),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-        ('TOPPADDING', (0, 0), (-1, -1), 6),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E5E7EB')),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    header_table = Table(
+        [[company_block, logo_cell]],
+        colWidths=[content_width - 80, 80]
+    )
+    header_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
     ]))
-    elements.append(line_table)
+    elements.append(header_table)
     elements.append(Spacer(1, 4*mm))
 
-    # Totals
-    totals_bold = ParagraphStyle('TB', parent=bold_style, fontSize=11, alignment=TA_RIGHT)
-    totals_data = [
-        [Paragraph("SUBTOTAL", bold_style), Paragraph(f"${invoice.subtotal:.2f}", right_style)],
-        [Paragraph("GST TOTAL", bold_style), Paragraph(f"${invoice.gst_total:.2f}", right_style)],
-        [Paragraph("TOTAL", bold_style), Paragraph(f"${invoice.total:.2f}", right_style)],
-        [Paragraph("BALANCE DUE", ParagraphStyle('BD', parent=bold_style, fontSize=11)),
-         Paragraph(f"A${invoice.total:.2f}", totals_bold)],
-    ]
-    totals_table = Table(totals_data, colWidths=[page_width - 100, 100])
-    totals_table.setStyle(TableStyle([
-        ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
-        ('LINEABOVE', (0, -1), (-1, -1), 1, colors.HexColor('#2563EB')),
-        ('TOPPADDING', (0, 0), (-1, -1), 4),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-    ]))
-    elements.append(totals_table)
+    # Horizontal line
+    elements.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor('#CCCCCC')))
     elements.append(Spacer(1, 8*mm))
 
-    # Bank details
-    bank = invoice.bank_details
-    if bank.account_name or bank.bsb or bank.account_number:
-        elements.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor('#E5E7EB')))
-        elements.append(Spacer(1, 2*mm))
-        elements.append(Paragraph("BANK DETAILS", heading_style))
-        if bank.account_name:
-            elements.append(Paragraph(f"ACCOUNT NAME: {bank.account_name}", normal_style))
-        if bank.bsb:
-            elements.append(Paragraph(f"BSB NO: {bank.bsb}", normal_style))
-        if bank.account_number:
-            elements.append(Paragraph(f"ACCOUNT NO: {bank.account_number}", normal_style))
-        elements.append(Spacer(1, 6*mm))
+    # === 2. TAX INVOICE title ===
+    elements.append(Paragraph("Tax Invoice", s_tax_title))
+    elements.append(Spacer(1, 4*mm))
 
-    elements.append(Paragraph("THANK YOU FOR YOUR BUSINESS", center_style))
+    # === 3. INVOICE TO (left) + Invoice metadata (right) ===
+    client = invoice.client_details
+    left_block = []
+    left_block.append(Paragraph("INVOICE TO", s_invoice_to_label))
+    if client.company_name:
+        left_block.append(Paragraph(client.company_name, s_client_name))
+    for line in [client.address_line1, client.address_line2, client.address_line3]:
+        if line:
+            left_block.append(Paragraph(line, s_client_addr))
+    if client.contact_name:
+        left_block.append(Paragraph(client.contact_name, s_client_addr))
+
+    meta_data = [
+        [Paragraph("INVOICE", s_meta_label), Paragraph(invoice.invoice_number or "—", s_meta_value)],
+        [Paragraph("DATE", s_meta_label), Paragraph(invoice.invoice_date or "—", s_meta_value)],
+        [Paragraph("DUE DATE", s_meta_label), Paragraph(invoice.due_date or "—", s_meta_value)],
+    ]
+    meta_table = Table(meta_data, colWidths=[60, 80])
+    meta_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('TOPPADDING', (0, 0), (-1, -1), 1),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 1),
+    ]))
+
+    info_table = Table([[left_block, meta_table]], colWidths=[content_width - 160, 160])
+    info_table.setStyle(TableStyle([('VALIGN', (0, 0), (-1, -1), 'TOP')]))
+    elements.append(info_table)
+    elements.append(Spacer(1, 8*mm))
+
+    # === 4. LINE ITEMS TABLE ===
+    light_blue = colors.HexColor('#DCE8F2')
+    th_style = s_th
+
+    table_header = [
+        Paragraph("DATE", th_style),
+        Paragraph("", th_style),  # product column (no header text)
+        Paragraph("DESCRIPTION", th_style),
+        Paragraph("GST", th_style),
+        Paragraph("QTY", th_style),
+        Paragraph("RATE", th_style),
+        Paragraph("AMOUNT", th_style),
+    ]
+    table_data = [table_header]
+
+    for item in invoice.line_items:
+        amt = item.quantity * item.rate
+        qty_str = str(int(item.quantity)) if item.quantity == int(item.quantity) else str(item.quantity)
+        table_data.append([
+            Paragraph(item.service_date, s_td),
+            Paragraph(item.product, s_td_bold),
+            Paragraph(item.description, s_td),
+            Paragraph("GST" if item.gst_applicable else "", s_td),
+            Paragraph(qty_str, s_td),
+            Paragraph(f"{item.rate:.2f}", s_td_right),
+            Paragraph(f"{amt:.2f}", s_td_right),
+        ])
+
+    if not invoice.line_items:
+        table_data.append([Paragraph("", s_td)] * 7)
+
+    col_widths = [62, 72, content_width - 62 - 72 - 40 - 35 - 45 - 60, 40, 35, 45, 60]
+    line_table = Table(table_data, colWidths=col_widths)
+    line_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), light_blue),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#7BA7C9')),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('TOPPADDING', (0, 0), (-1, 0), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+        ('TOPPADDING', (0, 1), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 5),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('LINEBELOW', (0, 0), (-1, 0), 0.5, colors.HexColor('#B0C4DE')),
+        ('LINEBELOW', (0, -1), (-1, -1), 0.5, colors.HexColor('#CCCCCC'), None, (2, 2)),
+    ]))
+    elements.append(line_table)
+    elements.append(Spacer(1, 6*mm))
+
+    # === 5. TOTALS ===
+    totals_data = [
+        ["", Paragraph("SUBTOTAL", s_totals_label), Paragraph(f"{invoice.subtotal:.2f}", s_totals_value)],
+        ["", Paragraph("GST TOTAL", s_totals_label), Paragraph(f"{invoice.gst_total:.2f}", s_totals_value)],
+        ["", Paragraph("TOTAL", s_totals_label), Paragraph(f"{invoice.total:.2f}", s_totals_value)],
+    ]
+    totals_table = Table(totals_data, colWidths=[content_width - 200, 120, 80])
+    totals_table.setStyle(TableStyle([
+        ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+        ('TOPPADDING', (0, 0), (-1, -1), 2),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+        ('LINEBELOW', (1, -1), (-1, -1), 0.5, colors.HexColor('#CCCCCC')),
+    ]))
+    elements.append(totals_table)
+    elements.append(Spacer(1, 3*mm))
+
+    # BALANCE DUE
+    balance_data = [["", Paragraph("BALANCE DUE", s_balance_label), Paragraph(f"A${invoice.total:,.2f}", s_balance_value)]]
+    balance_table = Table(balance_data, colWidths=[content_width - 200, 120, 80])
+    balance_table.setStyle(TableStyle([
+        ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ]))
+    elements.append(balance_table)
+    elements.append(Spacer(1, 10*mm))
+
+    # === 6. BANK DETAILS (gray box) ===
+    bank_content = f"""<b>BANK DETAILS;</b><br/><br/>
+<b>ACCOUNT NAME: {BANK_ACCOUNT_NAME}</b><br/><br/>
+<b>BSB NO: {BANK_BSB}</b><br/>
+<b>ACCOUNT NO: {BANK_ACCOUNT_NO}</b>"""
+
+    bank_style = ParagraphStyle('BankBox', fontName='Helvetica-Bold', fontSize=9, leading=13,
+                                 textColor=colors.black, backColor=colors.HexColor('#F0F0F0'),
+                                 borderPadding=(10, 10, 10, 10))
+    bank_para = Paragraph(bank_content, bank_style)
+
+    bank_box_table = Table([[bank_para]], colWidths=[content_width])
+    bank_box_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#F0F0F0')),
+        ('TOPPADDING', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+        ('LEFTPADDING', (0, 0), (-1, -1), 12),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+    ]))
+    elements.append(bank_box_table)
+
+    # === 7. FOOTER ===
+    elements.append(Spacer(1, 30*mm))
+    footer_data = [[Paragraph("THANKYOU FOR YOUR BUSINESS", s_footer), Paragraph("Page 1 of 1", s_footer_right)]]
+    footer_table = Table(footer_data, colWidths=[content_width * 0.5, content_width * 0.5])
+    elements.append(footer_table)
+
+    doc = SimpleDocTemplate(buffer, pagesize=A4,
+                            topMargin=top_margin, bottomMargin=bottom_margin,
+                            leftMargin=left_margin, rightMargin=right_margin)
     doc.build(elements)
     return buffer.getvalue()
 

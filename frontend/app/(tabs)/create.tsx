@@ -24,9 +24,7 @@ export default function CreateScreen() {
   const router = useRouter();
   const {
     invoice,
-    updateCompany,
     updateClient,
-    updateBank,
     updateField,
     addLineItem,
     removeLineItem,
@@ -94,23 +92,16 @@ export default function CreateScreen() {
             <Text style={styles.headerSub}>Fill in the details below</Text>
           </View>
 
-          {/* Your Company */}
-          <FormSection title="Your Company Details">
-            <FormInput label="Company Name" value={invoice.company_details.company_name} onChangeText={v => updateCompany('company_name', v)} testID="input-company-name" />
-            <FormInput label="Company Email" value={invoice.company_details.company_email} onChangeText={v => updateCompany('company_email', v)} keyboardType="email-address" testID="input-company-email" />
-            <FormInput label="Contact Name" value={invoice.company_details.contact_name} onChangeText={v => updateCompany('contact_name', v)} testID="input-contact-name" />
-            <FormInput label="Phone" value={invoice.company_details.phone} onChangeText={v => updateCompany('phone', v)} keyboardType="phone-pad" testID="input-phone" />
-            <FormInput label="ABN" value={invoice.company_details.abn} onChangeText={v => updateCompany('abn', v)} testID="input-abn" />
-            <FormInput label="Address Line 1" value={invoice.company_details.address_line1} onChangeText={v => updateCompany('address_line1', v)} testID="input-address1" />
-            <FormInput label="Address Line 2" value={invoice.company_details.address_line2} onChangeText={v => updateCompany('address_line2', v)} testID="input-address2" />
-            <FormInput label="Address Line 3" value={invoice.company_details.address_line3} onChangeText={v => updateCompany('address_line3', v)} testID="input-address3" />
-          </FormSection>
+          {/* Hardcoded Company Info Banner */}
+          <View style={styles.companyBanner} testID="company-banner">
+            <Text style={styles.companyBannerTitle}>The trustee for SAITECH TRADING TRUST</Text>
+            <Text style={styles.companyBannerSub}>33 LOWANNAWAY, ARMADALE WA 6112</Text>
+          </View>
 
           {/* Invoice To */}
           <FormSection title="Invoice To">
             <FormInput label="Company Name" value={invoice.client_details.company_name} onChangeText={v => updateClient('company_name', v)} testID="input-client-company" />
             <FormInput label="Contact Name" value={invoice.client_details.contact_name} onChangeText={v => updateClient('contact_name', v)} testID="input-client-contact" />
-            <FormInput label="Email" value={invoice.client_details.company_email} onChangeText={v => updateClient('company_email', v)} keyboardType="email-address" testID="input-client-email" />
             <FormInput label="Address Line 1" value={invoice.client_details.address_line1} onChangeText={v => updateClient('address_line1', v)} testID="input-client-address1" />
             <FormInput label="Address Line 2" value={invoice.client_details.address_line2} onChangeText={v => updateClient('address_line2', v)} testID="input-client-address2" />
             <FormInput label="Address Line 3" value={invoice.client_details.address_line3} onChangeText={v => updateClient('address_line3', v)} testID="input-client-address3" />
@@ -119,15 +110,8 @@ export default function CreateScreen() {
           {/* Invoice Details */}
           <FormSection title="Invoice Details">
             <FormInput label="Invoice Number" value={invoice.invoice_number} onChangeText={v => updateField('invoice_number', v)} placeholder="e.g. 001" testID="input-invoice-number" />
-            <FormInput label="Invoice Date" value={invoice.invoice_date} onChangeText={v => updateField('invoice_date', v)} placeholder="YYYY-MM-DD" testID="input-invoice-date" />
-            <FormInput label="Due Date" value={invoice.due_date} onChangeText={v => updateField('due_date', v)} placeholder="YYYY-MM-DD" testID="input-due-date" />
-          </FormSection>
-
-          {/* Bank Details */}
-          <FormSection title="Bank Details">
-            <FormInput label="Account Name" value={invoice.bank_details.account_name} onChangeText={v => updateBank('account_name', v)} testID="input-bank-name" />
-            <FormInput label="BSB" value={invoice.bank_details.bsb} onChangeText={v => updateBank('bsb', v)} testID="input-bank-bsb" />
-            <FormInput label="Account Number" value={invoice.bank_details.account_number} onChangeText={v => updateBank('account_number', v)} testID="input-bank-account" />
+            <FormInput label="Invoice Date" value={invoice.invoice_date} onChangeText={v => updateField('invoice_date', v)} placeholder="DD/MM/YYYY" testID="input-invoice-date" />
+            <FormInput label="Due Date" value={invoice.due_date} onChangeText={v => updateField('due_date', v)} placeholder="DD/MM/YYYY" testID="input-due-date" />
           </FormSection>
 
           {/* Line Items */}
@@ -146,7 +130,7 @@ export default function CreateScreen() {
                     </TouchableOpacity>
                   )}
                 </View>
-                <FormInput label="Service Date" value={item.service_date} onChangeText={v => updateLineItem(item.id, 'service_date', v)} placeholder="YYYY-MM-DD" testID={`input-service-date-${idx}`} />
+                <FormInput label="Service Date" value={item.service_date} onChangeText={v => updateLineItem(item.id, 'service_date', v)} placeholder="DD/MM/YYYY" testID={`input-service-date-${idx}`} />
                 <FormInput label="Product / Service" value={item.product} onChangeText={v => updateLineItem(item.id, 'product', v)} testID={`input-product-${idx}`} />
                 <FormInput label="Description" value={item.description} onChangeText={v => updateLineItem(item.id, 'description', v)} testID={`input-description-${idx}`} />
                 <View style={styles.gstRow}>
@@ -226,9 +210,19 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   scroll: { flex: 1 },
   scrollContent: { padding: 16 },
-  header: { marginBottom: 20 },
+  header: { marginBottom: 16 },
   headerTitle: { fontSize: 28, fontWeight: '800', color: '#111827', letterSpacing: -0.5 },
   headerSub: { fontSize: 14, color: '#6B7280', marginTop: 4 },
+  companyBanner: {
+    backgroundColor: '#EFF6FF',
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: '#2563EB',
+  },
+  companyBannerTitle: { fontSize: 14, fontWeight: '700', color: '#1E40AF' },
+  companyBannerSub: { fontSize: 12, color: '#3B82F6', marginTop: 2 },
   lineItem: {
     backgroundColor: '#F9FAFB',
     borderRadius: 8,
