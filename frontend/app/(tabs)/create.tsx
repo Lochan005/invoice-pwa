@@ -12,12 +12,13 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useInvoice } from '../../context/InvoiceContext';
 import FormSection from '../../components/FormSection';
 import FormInput from '../../components/FormInput';
 import DateInput from '../../components/DateInput';
+import ProductPicker from '../../components/ProductPicker';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -44,6 +45,22 @@ export default function CreateScreen() {
     setInvoice,
   } = useInvoice();
   const [saving, setSaving] = useState(false);
+
+  // Auto-fetch next invoice number when screen focuses and no invoice is being edited
+  useFocusEffect(
+    useCallback(() => {
+      if (!invoice.id && !invoice.invoice_number) {
+        fetch(`${API_URL}/api/invoices/next-number`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.next_number) {
+              updateField('invoice_number', data.next_number);
+            }
+          })
+          .catch(() => {});
+      }
+    }, [invoice.id, invoice.invoice_number])
+  );
 
   const handleInvoiceDateChange = useCallback((dateStr: string) => {
     updateField('invoice_date', dateStr);
@@ -128,7 +145,7 @@ export default function CreateScreen() {
 
           {/* Invoice Details */}
           <FormSection title="Invoice Details">
-            <FormInput label="Invoice Number" value={invoice.invoice_number} onChangeText={v => updateField('invoice_number', v)} placeholder="e.g. 001" testID="input-invoice-number" />
+            <FormInput label="Invoice Number" value={invoice.invoice_number} onChangeText={v => updateField('invoice_number', v)} placeholder="Auto-generated" testID="input-invoice-number" />
             <DateInput label="Invoice Date" value={invoice.invoice_date} onChangeDate={handleInvoiceDateChange} testID="input-invoice-date" />
             <DateInput label="Due Date (auto: +1 month)" value={invoice.due_date} onChangeDate={v => updateField('due_date', v)} testID="input-due-date" />
           </FormSection>
@@ -150,7 +167,7 @@ export default function CreateScreen() {
                   )}
                 </View>
                 <DateInput label="Service Date" value={item.service_date} onChangeDate={v => updateLineItem(item.id, 'service_date', v)} testID={`input-service-date-${idx}`} />
-                <FormInput label="Product / Service" value={item.product} onChangeText={v => updateLineItem(item.id, 'product', v)} testID={`input-product-${idx}`} />
+                <ProductPicker label="Product / Service" value={item.product} onSelect={v => updateLineItem(item.id, 'product', v)} testID={`input-product-${idx}`} />
                 <FormInput label="Description" value={item.description} onChangeText={v => updateLineItem(item.id, 'description', v)} testID={`input-description-${idx}`} />
                 <View style={styles.gstRow}>
                   <Text style={styles.gstLabel}>GST (10%)</Text>

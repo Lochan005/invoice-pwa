@@ -325,8 +325,15 @@ async def root():
 
 @api_router.get("/invoices/next-number")
 async def get_next_invoice_number():
-    count = await db.invoices.count_documents({})
-    return {"next_number": str(count + 1).zfill(3)}
+    invoices = await db.invoices.find({}, {"invoice_number": 1, "_id": 0}).to_list(1000)
+    numbers = []
+    for inv in invoices:
+        try:
+            numbers.append(int(inv.get("invoice_number", "0")))
+        except (ValueError, TypeError):
+            pass
+    next_num = max(numbers) + 1 if numbers else 1
+    return {"next_number": str(next_num).zfill(3)}
 
 @api_router.get("/invoices")
 async def list_invoices():

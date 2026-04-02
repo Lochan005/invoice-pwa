@@ -50,21 +50,25 @@ export default function SavedScreen() {
   };
 
   const handleDelete = (inv: Invoice) => {
-    Alert.alert('Delete Invoice', `Delete invoice #${inv.invoice_number}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await fetch(`${API_URL}/api/invoices/${inv.id}`, { method: 'DELETE' });
-            setInvoices(prev => prev.filter(i => i.id !== inv.id));
-          } catch (e: any) {
-            Alert.alert('Error', e.message);
-          }
+    Alert.alert(
+      'Delete Invoice',
+      `Are you sure you want to delete Invoice #${inv.invoice_number}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await fetch(`${API_URL}/api/invoices/${inv.id}`, { method: 'DELETE' });
+              setInvoices(prev => prev.filter(i => i.id !== inv.id));
+            } catch (e: any) {
+              Alert.alert('Error', e.message);
+            }
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
   const handleNewInvoice = () => {
@@ -73,13 +77,12 @@ export default function SavedScreen() {
   };
 
   const renderItem = ({ item, index }: { item: Invoice; index: number }) => (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={() => handleLoad(item)}
-      testID={`saved-invoice-${index}`}
-      activeOpacity={0.7}
-    >
-      <View style={styles.cardLeft}>
+    <View style={styles.card} testID={`saved-invoice-${index}`}>
+      <TouchableOpacity
+        style={styles.cardContent}
+        onPress={() => handleLoad(item)}
+        activeOpacity={0.7}
+      >
         <View style={styles.invoiceIcon}>
           <Text style={styles.invoiceIconText}>#{item.invoice_number || '?'}</Text>
         </View>
@@ -88,26 +91,23 @@ export default function SavedScreen() {
             Invoice #{item.invoice_number}
           </Text>
           <Text style={styles.cardSub} numberOfLines={1}>
-            {item.client_details?.company_name || 'No client'} · ${item.total?.toFixed(2) || '0.00'}
+            {item.client_details?.company_name || 'No client'} · A${item.total?.toFixed(2) || '0.00'}
           </Text>
           <Text style={styles.cardDate}>
             {item.invoice_date || 'No date'}
           </Text>
         </View>
-      </View>
-      <View style={styles.cardRight}>
-        <View style={styles.statusBadge}>
-          <Text style={styles.statusText}>{item.status || 'saved'}</Text>
-        </View>
-        <TouchableOpacity
-          onPress={() => handleDelete(item)}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          testID={`delete-invoice-${index}`}
-        >
-          <Ionicons name="trash-outline" size={18} color="#EF4444" />
-        </TouchableOpacity>
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.deleteBtn}
+        onPress={() => handleDelete(item)}
+        testID={`delete-invoice-${index}`}
+        activeOpacity={0.7}
+      >
+        <Ionicons name="trash-outline" size={16} color="#FFF" />
+        <Text style={styles.deleteBtnText}>Delete</Text>
+      </TouchableOpacity>
+    </View>
   );
 
   return (
@@ -193,20 +193,16 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FFF',
     borderRadius: 10,
-    padding: 14,
     marginBottom: 10,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    elevation: 1,
+    overflow: 'hidden',
   },
-  cardLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  cardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+  },
   invoiceIcon: {
     width: 44,
     height: 44,
@@ -221,12 +217,16 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 15, fontWeight: '700', color: '#111827' },
   cardSub: { fontSize: 13, color: '#6B7280', marginTop: 2 },
   cardDate: { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
-  cardRight: { alignItems: 'flex-end', gap: 8 },
-  statusBadge: {
-    backgroundColor: '#ECFDF5',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
+  deleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    backgroundColor: '#EF4444',
+    paddingVertical: 10,
+    marginHorizontal: 14,
+    marginBottom: 12,
+    borderRadius: 8,
   },
-  statusText: { fontSize: 11, color: '#10B981', fontWeight: '600' },
+  deleteBtnText: { fontSize: 13, fontWeight: '600', color: '#FFF' },
 });
