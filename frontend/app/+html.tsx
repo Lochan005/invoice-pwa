@@ -21,12 +21,36 @@ export default function Root({ children }: PropsWithChildren) {
         <style
           dangerouslySetInnerHTML={{
             __html: `
-              body > div:first-child { position: fixed !important; top: 0; left: 0; right: 0; bottom: 0; }
+              body { background-color: #f3f4f6; }
+              body > div:first-child { 
+                position: fixed !important; 
+                top: 0; 
+                bottom: 0; 
+                left: 50% !important; 
+                transform: translateX(-50%);
+                width: 100% !important;
+                max-width: 600px !important;
+                background-color: #ffffff;
+                box-shadow: 0 0 20px rgba(0,0,0,0.05); /* Soft shadow for desktop container */
+              }
+              /* ensure inner roots can respond properly */
+              #root { height: 100%; display: flex; flex-direction: column; }
               [role="tablist"] [role="tab"] * { overflow: visible !important; }
               [role="heading"], [role="heading"] * { overflow: visible !important; }
             `,
           }}
         />
+        <script dangerouslySetInnerHTML={{ __html: `
+          if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+              navigator.serviceWorker.register('/service-worker.js').then(function(registration) {
+                console.log('ServiceWorker registration successful with scope: ', registration.scope);
+              }, function(err) {
+                console.log('ServiceWorker registration failed: ', err);
+              });
+            });
+          }
+        `}} />
       </head>
       <body
         style={{
