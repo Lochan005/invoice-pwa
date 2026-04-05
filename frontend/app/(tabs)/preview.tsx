@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useInvoice } from '../../context/InvoiceContext';
 import * as Sharing from 'expo-sharing';
 
-const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
 
 // Hardcoded company & bank details matching the PDF
 const COMPANY = {
@@ -93,11 +93,13 @@ export default function PreviewScreen() {
       Alert.alert('Save First', 'Please save the invoice before emailing.');
       return;
     }
+    
     const clientEmail = invoice.client_details?.company_email;
     if (!clientEmail) {
       Alert.alert('No Email', 'Please add a company email in the "Invoice To" section first.');
       return;
     }
+    
     setEmailing(true);
     try {
       const res = await fetch(`${API_URL}/api/invoices/${invoice.id}/email`, {

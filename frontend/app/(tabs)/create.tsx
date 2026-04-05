@@ -20,7 +20,7 @@ import FormInput from '../../components/FormInput';
 import DateInput from '../../components/DateInput';
 import ProductPicker from '../../components/ProductPicker';
 
-const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
 
 const addOneMonth = (ddmmyyyy: string): string => {
   const parts = ddmmyyyy.split('/');

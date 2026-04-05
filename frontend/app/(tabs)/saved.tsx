@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useInvoice } from '../../context/InvoiceContext';
 import { Invoice } from '../../types/invoice';
 
-const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
 
 export default function SavedScreen() {
   const router = useRouter();
