@@ -41,15 +41,30 @@ export default function Root({ children }: PropsWithChildren) {
           }}
         />
         <script dangerouslySetInnerHTML={{ __html: `
-          if ('serviceWorker' in navigator) {
+          (function() {
+            if (!('serviceWorker' in navigator)) return;
+            var MIGRATION_KEY = 'invoice-sw-cache-v2';
             window.addEventListener('load', function() {
-              navigator.serviceWorker.register('/service-worker.js').then(function(registration) {
-                console.log('ServiceWorker registration successful with scope: ', registration.scope);
-              }, function(err) {
-                console.log('ServiceWorker registration failed: ', err);
+              navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                if (registrations.length > 0 && !localStorage.getItem(MIGRATION_KEY)) {
+                  return Promise.all(
+                    registrations.map(function(r) { return r.unregister(); })
+                  ).then(function() {
+                    try { localStorage.setItem(MIGRATION_KEY, '1'); } catch (e) {}
+                    window.location.reload();
+                  });
+                }
+                try {
+                  if (!localStorage.getItem(MIGRATION_KEY)) localStorage.setItem(MIGRATION_KEY, '1');
+                } catch (e) {}
+                return navigator.serviceWorker.register('/service-worker.js').then(function(registration) {
+                  console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                }).catch(function(err) {
+                  console.log('ServiceWorker registration failed: ', err);
+                });
               });
             });
-          }
+          })();
         `}} />
       </head>
       <body
