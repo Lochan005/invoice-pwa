@@ -14,6 +14,10 @@ import base64
 import io
 import resend
 
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseUpload
+
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -111,6 +115,35 @@ def calculate_totals(line_items: List[LineItem]):
     gst_total = sum(item.quantity * item.rate * 0.10 for item in line_items if item.gst_applicable)
     total = subtotal + gst_total
     return round(subtotal, 2), round(gst_total, 2), round(total, 2)
+
+def upload_to_drive(invoice: Invoice, pdf_bytes: bytes):
+    folder_id = os.environ.get('GOOGLE_DRIVE_FOLDER_ID')
+    cred_path = ROOT_DIR / 'credentials.json'
+    if not folder_id or not cred_path.exists():
+        logger.warning(f"Drive config missing (Folder ID: {bool(folder_id)}, Creds: {cred_path.exists()}). Skipping upload.")
+        return
+        
+    try:
+        SCOPES = ['https://www.googleapis.com/auth/drive.file']
+        creds = service_account.Credentials.from_service_account_file(str(cred_path), scopes=SCOPES)
+        service = build('drive', 'v3', credentials=creds)
+        file_name = f'Invoice_{invoice.invoice_number}.pdf'
+        
+        media = MediaIoBaseUpload(io.BytesIO(pdf_bytes), mimetype='application/pdf', resumable=True)
+        query = f"name='{file_name}' and '{folder_id}' in parents and trashed=false"
+        results = service.files().list(q=query, spaces='drive', fields='files(id, name)').execute()
+        items = results.get('files', [])
+        
+        if not items:
+            file_metadata = {'name': file_name, 'parents': [folder_id]}
+            service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+        else:
+            file_id = items[0]['id']
+            service.files().update(fileId=file_id, media_body=media).execute()
+            
+        logger.info(f"Successfully uploaded {file_name} to Drive.")
+    except Exception as e:
+        logger.error(f"Failed to upload to drive: {e}")
 
 def generate_invoice_pdf(invoice: Invoice) -> bytes:
     buffer = io.BytesIO()
@@ -353,6 +386,14 @@ async def create_invoice(data: InvoiceCreate):
     invoice = Invoice(**data.dict(), subtotal=subtotal, gst_total=gst_total, total=total)
     invoice_dict = invoice.dict()
     await db.invoices.insert_one({**invoice_dict})
+    
+    # Upload to Google Drive in the background
+    try:
+        pdf_bytes = generate_invoice_pdf(invoice)
+        asyncio.create_task(asyncio.to_thread(upload_to_drive, invoice, pdf_bytes))
+    except Exception as e:
+        logger.error(f"Failed to initiate drive upload on create: {e}")
+        
     return invoice_dict
 
 @api_router.put("/invoices/{invoice_id}")
@@ -363,7 +404,18 @@ async def update_invoice(invoice_id: str, data: InvoiceCreate):
     result = await db.invoices.update_one({"id": invoice_id}, {"$set": update_dict})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Invoice not found")
-    return await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+        
+    updated_doc = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    
+    # Upload to Google Drive in the background
+    try:
+        invoice = Invoice(**updated_doc)
+        pdf_bytes = generate_invoice_pdf(invoice)
+        asyncio.create_task(asyncio.to_thread(upload_to_drive, invoice, pdf_bytes))
+    except Exception as e:
+        logger.error(f"Failed to initiate drive upload on update: {e}")
+        
+    return updated_doc
 
 @api_router.delete("/invoices/{invoice_id}")
 async def delete_invoice(invoice_id: str):
