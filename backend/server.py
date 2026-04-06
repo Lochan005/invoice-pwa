@@ -118,14 +118,16 @@ def calculate_totals(line_items: List[LineItem]):
 
 def upload_to_drive(invoice: Invoice, pdf_bytes: bytes):
     folder_id = os.environ.get('GOOGLE_DRIVE_FOLDER_ID')
-    cred_path = ROOT_DIR / 'credentials.json'
-    if not folder_id or not cred_path.exists():
-        logger.warning(f"Drive config missing (Folder ID: {bool(folder_id)}, Creds: {cred_path.exists()}). Skipping upload.")
+    creds_json_str = os.environ.get('GOOGLE_CREDENTIALS_JSON')
+    if not folder_id or not creds_json_str:
+        logger.warning(f"Drive config missing (Folder ID: {bool(folder_id)}, Creds: {bool(creds_json_str)}). Skipping upload.")
         return
-        
+
     try:
+        import json
         SCOPES = ['https://www.googleapis.com/auth/drive.file']
-        creds = service_account.Credentials.from_service_account_file(str(cred_path), scopes=SCOPES)
+        creds_info = json.loads(creds_json_str)
+        creds = service_account.Credentials.from_service_account_info(creds_info, scopes=SCOPES)
         service = build('drive', 'v3', credentials=creds)
         file_name = f'Invoice_{invoice.invoice_number}.pdf'
         
