@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useInvoice } from '../../context/InvoiceContext';
 import * as Sharing from 'expo-sharing';
-import { apiUrl, parseApiError } from '../../lib/api';
+import { apiUrl, mapFetchFailureMessage, parseApiError } from '../../lib/api';
 
 // Hardcoded company & bank details matching the PDF
 const COMPANY = {
@@ -81,7 +81,7 @@ export default function PreviewScreen() {
       }
       Alert.alert('Success', 'PDF downloaded!');
     } catch (e: any) {
-      Alert.alert('Error', e.message);
+      Alert.alert('Error', mapFetchFailureMessage(e));
     } finally {
       setDownloading(false);
     }
@@ -115,7 +115,7 @@ export default function PreviewScreen() {
       }
       Alert.alert('Email Sent', `Invoice #${invoice.invoice_number} has been emailed to ${clientEmail}`);
     } catch (e: any) {
-      Alert.alert('Error', e.message);
+      Alert.alert('Error', mapFetchFailureMessage(e));
     } finally {
       setEmailing(false);
     }

@@ -14,7 +14,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useInvoice } from '../../context/InvoiceContext';
 import { Invoice } from '../../types/invoice';
-import { apiUrl, parseApiError } from '../../lib/api';
+import { apiUrl, mapFetchFailureMessage, parseApiError } from '../../lib/api';
 
 export default function SavedScreen() {
   const router = useRouter();
@@ -38,9 +38,9 @@ export default function SavedScreen() {
       }
       setInvoices(data);
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'Could not load invoices';
+      const message = mapFetchFailureMessage(e);
       setListError(message);
-      console.error('[Saved]', message);
+      console.error('[Saved]', e);
     } finally {
       setLoading(false);
       setRefreshing(false);
