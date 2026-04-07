@@ -13,8 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useInvoice } from '../../context/InvoiceContext';
 import * as Sharing from 'expo-sharing';
-
-const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
+import { apiUrl, parseApiError } from '../../lib/api';
 
 // Hardcoded company & bank details matching the PDF
 const COMPANY = {
@@ -62,8 +61,8 @@ export default function PreviewScreen() {
     }
     setDownloading(true);
     try {
-      const res = await fetch(`${API_URL}/api/invoices/${invoice.id}/pdf`, { method: 'POST' });
-      if (!res.ok) throw new Error('Failed to generate PDF');
+      const res = await fetch(apiUrl(`/api/invoices/${invoice.id}/pdf`), { method: 'POST' });
+      if (!res.ok) throw new Error(await parseApiError(res));
       const data = await res.json();
 
       if (Platform.OS === 'web') {
@@ -102,7 +101,7 @@ export default function PreviewScreen() {
     
     setEmailing(true);
     try {
-      const res = await fetch(`${API_URL}/api/invoices/${invoice.id}/email`, {
+      const res = await fetch(apiUrl(`/api/invoices/${invoice.id}/email`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -112,8 +111,7 @@ export default function PreviewScreen() {
         }),
       });
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || 'Failed to send email');
+        throw new Error(await parseApiError(res));
       }
       Alert.alert('Email Sent', `Invoice #${invoice.invoice_number} has been emailed to ${clientEmail}`);
     } catch (e: any) {
