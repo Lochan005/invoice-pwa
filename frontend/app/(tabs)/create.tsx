@@ -19,7 +19,7 @@ import FormSection from '../../components/FormSection';
 import FormInput from '../../components/FormInput';
 import DateInput from '../../components/DateInput';
 import ProductPicker from '../../components/ProductPicker';
-import { apiUrl, parseApiError } from '../../lib/api';
+import { apiUrl, mapFetchFailureMessage, parseApiError } from '../../lib/api';
 
 const addOneMonth = (ddmmyyyy: string): string => {
   const parts = ddmmyyyy.split('/');
@@ -107,7 +107,7 @@ export default function CreateScreen() {
         { text: 'OK' },
       ]);
     } catch (e: any) {
-      Alert.alert('Error', e.message);
+      Alert.alert('Error', mapFetchFailureMessage(e));
     } finally {
       setSaving(false);
     }

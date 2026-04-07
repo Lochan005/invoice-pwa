@@ -473,7 +473,13 @@ async def email_invoice(invoice_id: str, email_request: EmailRequest):
         raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
 
 app.include_router(api_router)
-app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_credentials=False,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.on_event("shutdown")
 async def shutdown_db_client():

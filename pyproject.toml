@@ -1,0 +1,7 @@
+[project]
+name = "invoice-pwa"
+version = "0"
+description = "Vercel FastAPI entry via backend.server"
+
+[project.scripts]
+app = "backend.server:app"
