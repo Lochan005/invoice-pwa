@@ -385,8 +385,9 @@ async def get_invoice(invoice_id: str):
 @api_router.post("/invoices")
 async def create_invoice(data: InvoiceCreate):
     subtotal, gst_total, total = calculate_totals(data.line_items)
-    invoice = Invoice(**data.dict(), subtotal=subtotal, gst_total=gst_total, total=total)
-    invoice_dict = invoice.dict()
+    payload = data.model_dump()
+    invoice = Invoice(**payload, subtotal=subtotal, gst_total=gst_total, total=total)
+    invoice_dict = invoice.model_dump()
     await db.invoices.insert_one({**invoice_dict})
     
     # Upload to Google Drive in the background
@@ -401,7 +402,7 @@ async def create_invoice(data: InvoiceCreate):
 @api_router.put("/invoices/{invoice_id}")
 async def update_invoice(invoice_id: str, data: InvoiceCreate):
     subtotal, gst_total, total = calculate_totals(data.line_items)
-    update_dict = data.dict()
+    update_dict = data.model_dump()
     update_dict.update(subtotal=subtotal, gst_total=gst_total, total=total, updated_at=datetime.now(timezone.utc).isoformat())
     result = await db.invoices.update_one({"id": invoice_id}, {"$set": update_dict})
     if result.matched_count == 0:

@@ -19,8 +19,7 @@ import FormSection from '../../components/FormSection';
 import FormInput from '../../components/FormInput';
 import DateInput from '../../components/DateInput';
 import ProductPicker from '../../components/ProductPicker';
-
-const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
+import { apiUrl, parseApiError } from '../../lib/api';
 
 const addOneMonth = (ddmmyyyy: string): string => {
   const parts = ddmmyyyy.split('/');
@@ -50,14 +49,19 @@ export default function CreateScreen() {
   useFocusEffect(
     useCallback(() => {
       if (!invoice.id && !invoice.invoice_number) {
-        fetch(`${API_URL}/api/invoices/next-number`)
-          .then(res => res.json())
+        fetch(apiUrl('/api/invoices/next-number'))
+          .then(async res => {
+            if (!res.ok) throw new Error(await parseApiError(res));
+            return res.json();
+          })
           .then(data => {
             if (data.next_number) {
               updateField('invoice_number', data.next_number);
             }
           })
-          .catch(() => {});
+          .catch(err => {
+            console.warn('[Create] next-number:', err);
+          });
       }
     }, [invoice.id, invoice.invoice_number])
   );
@@ -88,14 +92,14 @@ export default function CreateScreen() {
       };
       const method = invoice.id ? 'PUT' : 'POST';
       const url = invoice.id
-        ? `${API_URL}/api/invoices/${invoice.id}`
-        : `${API_URL}/api/invoices`;
+        ? apiUrl(`/api/invoices/${invoice.id}`)
+        : apiUrl('/api/invoices');
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      if (!res.ok) throw new Error('Failed to save');
+      if (!res.ok) throw new Error(await parseApiError(res));
       const saved = await res.json();
       setInvoice(saved);
       Alert.alert('Success', 'Invoice saved!', [
